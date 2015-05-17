@@ -138,6 +138,9 @@ int main(){
 
 	// Find edges that can replace an edge in the MST
 
+	int most_vital_edge = -1;
+	int min_increase = -1;
+
 	for(int i = 0;i < m;++i){
 		if(in_tree[i]){
 			memset(visited,false,sizeof visited);
@@ -158,9 +161,14 @@ int main(){
 
 			printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
 
+			if(most_vital_edge == -1 || e[rep].w - e[i].w < min_increase){
+				min_increase = e[rep].w - e[i].w;
+				most_vital_edge = i;
+			}
+
 			/*
 			//test
-			
+
 			for(int j = 1;j <= n;++j)
 				parent[j] = j;
 
@@ -175,6 +183,8 @@ int main(){
 	}
 
 	printf("\n");
+	printf("Most vital edge = (%d, %d)\n",e[most_vital_edge].u,e[most_vital_edge].v);
+	printf("Increase = %d\n",min_increase);
 
 	return 0;
 }
