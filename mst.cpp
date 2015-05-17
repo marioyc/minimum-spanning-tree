@@ -36,7 +36,7 @@ void Union(int x, int y){
 
 // dfs to find a path between two nodes in the MST
 
-vector<int> L[MAXN],path;
+vector<int> L[MAXN],edge_id[MAXN],path,path_edges;
 bool visited[MAXN];
 
 bool dfs(int u, int v){
@@ -51,10 +51,13 @@ bool dfs(int u, int v){
 
 		for(int i = 0;i < L[u].size();++i){
 			int to = L[u][i];
+			path_edges.push_back(edge_id[u][i]);
 
 			if(dfs(to,v)){
 				ret = true;
 				break;
+			}else{
+				path_edges.pop_back();
 			}
 		}
 	}
@@ -107,7 +110,10 @@ int main(){
 			in_tree[i] = true;
 
 			L[ e[i].u ].push_back(e[i].v);
+			edge_id[ e[i].u ].push_back(i);
+
 			L[ e[i].v ].push_back(e[i].u);
+			edge_id[ e[i].v ].push_back(i);
 
 			printf("%d - %d (%d)\n",e[i].u,e[i].v,e[i].w);
 		}else in_tree[i] = false;
@@ -116,6 +122,8 @@ int main(){
 	printf("Total weight = %d\n\n",total);
 
 	// Find the path int T that connect two endpoint of an edge
+
+	bool verified = true;
 
 	for(int i = 0;i < m;++i){
 		if(!in_tree[i]){
@@ -131,10 +139,21 @@ int main(){
 			}
 
 			printf("\n");
+
+			// Verify MST
+
+			for(int j = 0;j < path_edges.size();++j){
+				if(e[i].w < e[ path_edges[j] ].w)
+					verified = false;
+			}
 		}
 	}
 
 	printf("\n");
+
+	printf("Verification: ");
+	if(verified) printf("It is an MST\n\n");
+	else printf("It is not an MST\n\n");
 
 	// Find edges that can replace an edge in the MST
 
