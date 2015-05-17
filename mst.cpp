@@ -146,11 +146,31 @@ int main(){
 
 			printf("(%d, %d) :",e[i].u,e[i].v);
 
+			int rep = -1;
+
 			for(int j = 0;j < m;++j)
-				if(j != i && ((mark[ e[j].u ] == e[i].u && mark[ e[j].v ] == e[i].v) || (mark[ e[j].v ] == e[i].u && mark[ e[j].u ] == e[i].v)))
+				if(j != i && ((mark[ e[j].u ] == e[i].u && mark[ e[j].v ] == e[i].v) || (mark[ e[j].v ] == e[i].u && mark[ e[j].u ] == e[i].v))){
 					printf(" (%d, %d)",e[j].u,e[j].v);
 
-			printf("\n");
+					if(rep == -1 || e[j].w < e[rep].w)
+						rep = j;
+				}
+
+			printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
+
+			/*
+			//test
+			
+			for(int j = 1;j <= n;++j)
+				parent[j] = j;
+
+			for(int j = 0;j < m;++j){
+				if(j != i && Find(e[j].u) != Find(e[j].v)){
+					Union(e[j].u,e[j].v);
+					if(!in_tree[j])
+						printf("(%d, %d)\n",e[j].u,e[j].v);
+				}
+			}*/
 		}
 	}
 
