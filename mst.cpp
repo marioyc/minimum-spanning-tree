@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <algorithm>
 #include <vector>
 
@@ -7,6 +8,8 @@ using namespace std;
 
 #define MAXN 100
 #define MAXM 10000
+
+int n,m;
 
 struct edge{
 	int u,v,w;
@@ -86,8 +89,73 @@ void dfs2(int u, int v, int cur){
 	}
 }
 
+// dfs to root the tree
+int a[MAXN],in[MAXN],out[MAXN],cont;
+int parent_lca[10][MAXN];
+int height[MAXN];
+
+void dfs3(int cur, int p = 0){
+	a[cont] = cur;
+	in[cur] = cont++;
+
+	parent_lca[0][cur] = p;
+	height[cur] = (p == 0? 0 : 1 + height[p]);
+
+	for(int i = 1;i <= 9;++i)
+		parent_lca[i][cur] = parent_lca[i - 1][ parent_lca[i - 1][cur] ];
+
+	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
+		int to = L[cur][i];
+
+		if(to != p)
+			dfs3(to,cur);
+	}
+
+	out[cur] = cont;
+}
+
+// lowest common ancestor
+
+int lca(int u, int v){
+	if(height[u] < height[v])
+		swap(u,v);
+
+	for(int i = 9;i >= 0;--i)
+		if((height[u] - height[v]) >> i & 1)
+			u = parent_lca[i][u];
+	
+	if(u == v)
+		return u;
+
+	for(int i = 9;i >= 0;--i)
+		if(parent_lca[i][u] != parent_lca[i][v]){
+			u = parent_lca[i][u];
+			v = parent_lca[i][v];
+		}
+
+	return parent_lca[0][u];
+}
+
+// dfs for the sensitivity analysis of tree edges
+
+int k[MAXN],tree_sensitivity[MAXN];
+
+void dfs4(int cur, int p){
+	if(p != 0)
+		tree_sensitivity[cur] = query(0,0,n - 1,in[cur],out[cur]);
+
+	// update?
+
+	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
+		int to = L[cur][i];
+
+		if(to != p)
+			dfs4(to,cur);
+	}
+}
+
 int main(){
-	int n = 0,m = 0;
+	n = m = 0;
 
 	while(scanf("%d,%d,%d",&e[m].u,&e[m].v,&e[m].w) == 3){
 		n = max(n,max(e[m].u,e[m].v));
@@ -204,6 +272,16 @@ int main(){
 	printf("\n");
 	printf("Most vital edge = (%d, %d)\n",e[most_vital_edge].u,e[most_vital_edge].v);
 	printf("Increase = %d\n",min_increase);
+
+	// Sensitivity analysis for tree edges
+
+	cont = 0;
+	dfs3(1,0);
+
+	for(int i = 1;i <= n;++i)
+		k[i] = INT_MAX;
+
+	dfs4(1,0);
 
 	return 0;
 }
