@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <vector>
 
+#include <iostream>
+
 using namespace std;
 
 #define MAXN 100
@@ -90,28 +92,30 @@ void dfs2(int u, int v, int cur){
 }
 
 // dfs to root the tree
-int a[MAXN],in[MAXN],out[MAXN],cont;
-int parent_lca[10][MAXN];
+int in[MAXN],out[MAXN],cont;
+int parent_lca[10][MAXN],maxw[10][MAXN];
 int height[MAXN];
 
-void dfs3(int cur, int p = 0){
-	a[cont] = cur;
+void dfs3(int cur, int p, int e_id){
 	in[cur] = cont++;
 
 	parent_lca[0][cur] = p;
+	maxw[0][cur] = e[e_id].w;
 	height[cur] = (p == 0? 0 : 1 + height[p]);
 
-	for(int i = 1;i <= 9;++i)
+	for(int i = 1;i <= 9;++i){
 		parent_lca[i][cur] = parent_lca[i - 1][ parent_lca[i - 1][cur] ];
+		maxw[i][cur] = max(maxw[i - 1][cur],maxw[i - 1][ parent_lca[i - 1][cur ]]);
+	}
 
 	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
 		int to = L[cur][i];
 
 		if(to != p)
-			dfs3(to,cur);
+			dfs3(to,cur,edge_id[cur][i]);
 	}
 
-	out[cur] = cont;
+	out[cur] = cont - 1;
 }
 
 // lowest common ancestor
@@ -136,21 +140,74 @@ int lca(int u, int v){
 	return parent_lca[0][u];
 }
 
+int max_weight(int u, int up){
+	int ret = 0;
+
+	for(int i = 9;i >= 0;--i){
+		if(height[u] >> i & 1){
+			ret = max(ret,maxw[i][u]);
+			u = parent_lca[i][u];
+		}
+	}
+
+	return ret;
+}
+
+// segment tree to calculate minimum in a range and update
+
+int T[4 * MAXN];
+
+void init(int node, int l, int r){
+	T[node] = INT_MAX;
+	
+	if(l != r){
+		int mi = (l + r) >> 1;
+		init(2 * node + 1,l,mi);
+		init(2 * node + 2,mi + 1,r);
+	}
+}
+
+int query(int node, int l, int r, int x, int y){
+	if(r < x || l > y) return INT_MAX;
+	if(x <= l && r <= y) return T[node];
+
+	int mi = (l + r) >> 1;
+
+	return min(query(2 * node + 1,l,mi,x,y),query(2 * node + 2,mi + 1,r,x,y));
+}
+
+void update(int node, int l, int r, int x, int val){
+	if(l == r) T[node] = min(T[node],val);
+	else{
+		int mi = (l + r) >> 1;
+
+		if(x <= mi) update(2 * node + 1,l,mi,x,val);
+		else update(2 * node + 2,mi + 1,r,x,val);
+
+		T[node] = min(T[2 * node + 1],T[2 * node + 2]);
+	}
+}
+
 // dfs for the sensitivity analysis of tree edges
 
-int k[MAXN],tree_sensitivity[MAXN];
+int k[MAXN],sensitivity[MAXM];
+vector<int> L2[MAXN],W2[MAXN];
 
-void dfs4(int cur, int p){
-	if(p != 0)
-		tree_sensitivity[cur] = query(0,0,n - 1,in[cur],out[cur]);
+void dfs4(int cur, int p, int e_id){
+	if(p != 0){
+		sensitivity[e_id] = query(0,0,n - 1,in[cur],out[cur]) - e[e_id].w;
+	}
 
-	// update?
+	// decrease keys
+	for(int i = (int)L2[cur].size() - 1;i >= 0;--i){
+		update(0,0,n - 1,in[ L2[cur][i] ],W2[cur][i]);
+	}
 
 	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
 		int to = L[cur][i];
 
 		if(to != p)
-			dfs4(to,cur);
+			dfs4(to,cur,edge_id[cur][i]);
 	}
 }
 
@@ -252,20 +309,6 @@ int main(){
 				min_increase = e[rep].w - e[i].w;
 				most_vital_edge = i;
 			}
-
-			/*
-			//test
-
-			for(int j = 1;j <= n;++j)
-				parent[j] = j;
-
-			for(int j = 0;j < m;++j){
-				if(j != i && Find(e[j].u) != Find(e[j].v)){
-					Union(e[j].u,e[j].v);
-					if(!in_tree[j])
-						printf("(%d, %d)\n",e[j].u,e[j].v);
-				}
-			}*/
 		}
 	}
 
@@ -273,15 +316,62 @@ int main(){
 	printf("Most vital edge = (%d, %d)\n",e[most_vital_edge].u,e[most_vital_edge].v);
 	printf("Increase = %d\n",min_increase);
 
-	// Sensitivity analysis for tree edges
+	// Order vertices in the tree, precalculate lowest common ancestor
 
 	cont = 0;
-	dfs3(1,0);
+	dfs3(1,0,-1);
 
-	for(int i = 1;i <= n;++i)
-		k[i] = INT_MAX;
+	// Sensitivity analysis for tree edges
 
-	dfs4(1,0);
+	// replace non tree edges by two auxiliary edges
+	for(int i = 0;i < m;++i){
+		if(!in_tree[i]){
+			int anc = lca(e[i].u,e[i].v);
+
+			if(anc != e[i].u && anc != e[i].v){
+				L2[anc].push_back(e[i].u);
+				W2[anc].push_back(e[i].w);
+
+				L2[anc].push_back(e[i].v);
+				W2[anc].push_back(e[i].w);
+			}else if(height[ e[i].u ] < height[ e[i].v ]){
+				L2[ e[i].u ].push_back(e[i].v);
+				W2[ e[i].u ].push_back(e[i].w);
+			}else{
+				L2[ e[i].v ].push_back(e[i].u);
+				W2[ e[i].v ].push_back(e[i].w);
+			}
+		}
+	}
+
+	init(0,0,n - 1);
+	dfs4(1,0,-1);
+
+	// Sensitivity analsys for non tree edges
+
+	for(int i = 0;i < m;++i){
+		if(!in_tree[i]){
+			int anc = lca(e[i].u,e[i].v);
+
+			if(anc != e[i].u && anc != e[i].v){
+				sensitivity[i] = e[i].w - max(max_weight(e[i].u,height[ e[i].u ] - height[anc]),
+												max_weight(e[i].v,height[ e[i].v ] - height[anc]));
+			}else if(height[ e[i].u ] < height[ e[i].v ]){
+				sensitivity[i] = e[i].w - max_weight(e[i].v,height[ e[i].v ] - height[ e[i].u ]);
+			}else{
+				sensitivity[i] = e[i].w - max_weight(e[i].u,height[ e[i].u ] - height[ e[i].v ]);
+			}
+		}
+	}
+
+	printf("\nSensitivity analysis:\n");
+
+	for(int i = 0;i < m;++i){
+		if(in_tree[i])
+			printf("(%d, %d) can increase up to %d\n",e[i].u,e[i].v,sensitivity[i]);
+		else
+			printf("(%d, %d) can decrease up to %d\n",e[i].u,e[i].v,sensitivity[i]);
+	}
 
 	return 0;
 }
