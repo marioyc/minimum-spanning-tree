@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <iostream>
-
 using namespace std;
 
 #define MAXN 100
@@ -283,7 +281,7 @@ int main(){
 	// Find edges that can replace an edge in the MST
 
 	int most_vital_edge = -1;
-	int min_increase = -1;
+	int max_increase = -1;
 
 	for(int i = 0;i < m;++i){
 		if(in_tree[i]){
@@ -305,8 +303,8 @@ int main(){
 
 			printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
 
-			if(most_vital_edge == -1 || e[rep].w - e[i].w < min_increase){
-				min_increase = e[rep].w - e[i].w;
+			if(most_vital_edge == -1 || e[rep].w - e[i].w > max_increase){
+				max_increase = e[rep].w - e[i].w;
 				most_vital_edge = i;
 			}
 		}
@@ -314,7 +312,7 @@ int main(){
 
 	printf("\n");
 	printf("Most vital edge = (%d, %d)\n",e[most_vital_edge].u,e[most_vital_edge].v);
-	printf("Increase = %d\n",min_increase);
+	printf("Increase = %d\n",max_increase);
 
 	// Order vertices in the tree, precalculate lowest common ancestor
 
