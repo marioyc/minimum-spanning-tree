@@ -378,7 +378,6 @@ int main(int argc, char *argv[]){
 		printf("Increase = %d\n",max_increase);
 	}
 
-	/*
 	// Order vertices in the tree, precalculate lowest common ancestor
 
 	cont = 0;
@@ -434,7 +433,7 @@ int main(int argc, char *argv[]){
 			printf("(%d, %d) can increase up to %d\n",e[i].u,e[i].v,sensitivity[i]);
 		else
 			printf("(%d, %d) can decrease up to %d\n",e[i].u,e[i].v,sensitivity[i]);
-	}*/
+	}
 
 	MPI_Finalize();
 
