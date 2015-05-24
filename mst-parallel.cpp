@@ -293,7 +293,7 @@ int main(int argc, char *argv[]){
 			path.clear();
 			dfs(e[i].u,e[i].v);
 
-			printf("(%d, %d) : ",e[i].u,e[i].v);
+			printf("process %d, (%d, %d) : ",rank,e[i].u,e[i].v);
 
 			for(int j = 0;j < path.size();++j){
 				if(j > 0) printf(" -> ");
@@ -335,7 +335,7 @@ int main(int argc, char *argv[]){
 			dfs2(e[i].u,e[i].v,e[i].u);
 			dfs2(e[i].v,e[i].u,e[i].v);
 
-			printf("(%d, %d) :",e[i].u,e[i].v);
+			printf("process %d, (%d, %d) :",rank,e[i].u,e[i].v);
 
 			int rep = -1;
 
@@ -376,63 +376,6 @@ int main(int argc, char *argv[]){
 		printf("\n");
 		printf("Most vital edge = (%d, %d)\n",e[most_vital_edge].u,e[most_vital_edge].v);
 		printf("Increase = %d\n",max_increase);
-	}
-
-	// Order vertices in the tree, precalculate lowest common ancestor
-
-	cont = 0;
-	dfs3(1,0,-1);
-
-	// Sensitivity analysis for tree edges
-
-	// replace non tree edges by two auxiliary edges
-	for(int i = 0;i < m;++i){
-		if(!in_tree[i]){
-			int anc = lca(e[i].u,e[i].v);
-
-			if(anc != e[i].u && anc != e[i].v){
-				L2[anc].push_back(e[i].u);
-				W2[anc].push_back(e[i].w);
-
-				L2[anc].push_back(e[i].v);
-				W2[anc].push_back(e[i].w);
-			}else if(height[ e[i].u ] < height[ e[i].v ]){
-				L2[ e[i].u ].push_back(e[i].v);
-				W2[ e[i].u ].push_back(e[i].w);
-			}else{
-				L2[ e[i].v ].push_back(e[i].u);
-				W2[ e[i].v ].push_back(e[i].w);
-			}
-		}
-	}
-
-	init(0,0,n - 1);
-	dfs4(1,0,-1);
-
-	// Sensitivity analsys for non tree edges
-
-	for(int i = 0;i < m;++i){
-		if(!in_tree[i]){
-			int anc = lca(e[i].u,e[i].v);
-
-			if(anc != e[i].u && anc != e[i].v){
-				sensitivity[i] = e[i].w - max(max_weight(e[i].u,height[ e[i].u ] - height[anc]),
-												max_weight(e[i].v,height[ e[i].v ] - height[anc]));
-			}else if(height[ e[i].u ] < height[ e[i].v ]){
-				sensitivity[i] = e[i].w - max_weight(e[i].v,height[ e[i].v ] - height[ e[i].u ]);
-			}else{
-				sensitivity[i] = e[i].w - max_weight(e[i].u,height[ e[i].u ] - height[ e[i].v ]);
-			}
-		}
-	}
-
-	printf("\nSensitivity analysis:\n");
-
-	for(int i = 0;i < m;++i){
-		if(in_tree[i])
-			printf("(%d, %d) can increase up to %d\n",e[i].u,e[i].v,sensitivity[i]);
-		else
-			printf("(%d, %d) can decrease up to %d\n",e[i].u,e[i].v,sensitivity[i]);
 	}
 
 	MPI_Finalize();
