@@ -23,7 +23,7 @@ bool in_tree[MAXM];
 
 // Union - Find
 
-int parent[MAXN + 1];
+int parent[MAXN + 1],rank[MAXN + 1];
 
 int Find(int x){
 	if(parent[x] == x) return x;
@@ -34,7 +34,15 @@ int Find(int x){
 void Union(int x, int y){
 	x = Find(x);
 	y = Find(y);
-	parent[x] = y;
+
+	if(rank[x] < rank[y]){
+		parent[x] = y;
+	}else{
+		parent[y] = x;
+		
+		if(rank[x] == rank[y])
+			++rank[x];
+	}
 }
 
 // dfs to find a path between two nodes in the MST
