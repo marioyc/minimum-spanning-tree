@@ -16,18 +16,18 @@ int n,m;
 
 struct edge{
 	int u,v,w;
+	int id;
 
 	bool operator < (edge e) const{
 		return w < e.w;
 	}
-}e[MAXM];
+}e[MAXM],e_local[MAXM];
 
 bool in_tree[MAXM];
 
 // Union - Find
 
-int parent[MAXN + 1];
-
+int parent[MAXN + 1],uf_rank[MAXN + 1];
 int Find(int x){
 	if(parent[x] == x) return x;
 	parent[x] = Find(parent[x]);
@@ -37,7 +37,15 @@ int Find(int x){
 void Union(int x, int y){
 	x = Find(x);
 	y = Find(y);
-	parent[x] = y;
+
+	if(uf_rank[x] < uf_rank[y]){
+		parent[x] = y;
+	}else{
+		parent[y] = x;
+
+		if(uf_rank[x] == uf_rank[y])
+			++uf_rank[x];
+	}
 }
 
 // dfs to find a path between two nodes in the MST
@@ -92,126 +100,6 @@ void dfs2(int u, int v, int cur){
 	}
 }
 
-// dfs to root the tree
-int in[MAXN],out[MAXN],cont;
-int parent_lca[10][MAXN],maxw[10][MAXN];
-int height[MAXN];
-
-void dfs3(int cur, int p, int e_id){
-	in[cur] = cont++;
-
-	parent_lca[0][cur] = p;
-	maxw[0][cur] = e[e_id].w;
-	height[cur] = (p == 0? 0 : 1 + height[p]);
-
-	for(int i = 1;i <= 9;++i){
-		parent_lca[i][cur] = parent_lca[i - 1][ parent_lca[i - 1][cur] ];
-		maxw[i][cur] = max(maxw[i - 1][cur],maxw[i - 1][ parent_lca[i - 1][cur ]]);
-	}
-
-	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
-		int to = L[cur][i];
-
-		if(to != p)
-			dfs3(to,cur,edge_id[cur][i]);
-	}
-
-	out[cur] = cont - 1;
-}
-
-// lowest common ancestor
-
-int lca(int u, int v){
-	if(height[u] < height[v])
-		swap(u,v);
-
-	for(int i = 9;i >= 0;--i)
-		if((height[u] - height[v]) >> i & 1)
-			u = parent_lca[i][u];
-	
-	if(u == v)
-		return u;
-
-	for(int i = 9;i >= 0;--i)
-		if(parent_lca[i][u] != parent_lca[i][v]){
-			u = parent_lca[i][u];
-			v = parent_lca[i][v];
-		}
-
-	return parent_lca[0][u];
-}
-
-int max_weight(int u, int up){
-	int ret = 0;
-
-	for(int i = 9;i >= 0;--i){
-		if(height[u] >> i & 1){
-			ret = max(ret,maxw[i][u]);
-			u = parent_lca[i][u];
-		}
-	}
-
-	return ret;
-}
-
-// segment tree to calculate minimum in a range and update
-
-int T[4 * MAXN];
-
-void init(int node, int l, int r){
-	T[node] = INT_MAX;
-	
-	if(l != r){
-		int mi = (l + r) >> 1;
-		init(2 * node + 1,l,mi);
-		init(2 * node + 2,mi + 1,r);
-	}
-}
-
-int query(int node, int l, int r, int x, int y){
-	if(r < x || l > y) return INT_MAX;
-	if(x <= l && r <= y) return T[node];
-
-	int mi = (l + r) >> 1;
-
-	return min(query(2 * node + 1,l,mi,x,y),query(2 * node + 2,mi + 1,r,x,y));
-}
-
-void update(int node, int l, int r, int x, int val){
-	if(l == r) T[node] = min(T[node],val);
-	else{
-		int mi = (l + r) >> 1;
-
-		if(x <= mi) update(2 * node + 1,l,mi,x,val);
-		else update(2 * node + 2,mi + 1,r,x,val);
-
-		T[node] = min(T[2 * node + 1],T[2 * node + 2]);
-	}
-}
-
-// dfs for the sensitivity analysis of tree edges
-
-int k[MAXN],sensitivity[MAXM];
-vector<int> L2[MAXN],W2[MAXN];
-
-void dfs4(int cur, int p, int e_id){
-	if(p != 0){
-		sensitivity[e_id] = query(0,0,n - 1,in[cur],out[cur]) - e[e_id].w;
-	}
-
-	// decrease keys
-	for(int i = (int)L2[cur].size() - 1;i >= 0;--i){
-		update(0,0,n - 1,in[ L2[cur][i] ],W2[cur][i]);
-	}
-
-	for(int i = (int)L[cur].size() - 1;i >= 0;--i){
-		int to = L[cur][i];
-
-		if(to != p)
-			dfs4(to,cur,edge_id[cur][i]);
-	}
-}
-
 int main(int argc, char *argv[]){
 	MPI_Init(&argc,&argv);
 	MPI_Comm_size(MPI_COMM_WORLD,&p);
@@ -222,39 +110,118 @@ int main(int argc, char *argv[]){
 
 		while(scanf("%d,%d,%d",&e[m].u,&e[m].v,&e[m].w) == 3){
 			n = max(n,max(e[m].u,e[m].v));
+			e[m].id = m;
 			++m;
 		}
-
-		// Find minimum spanning tree using Kruskal's algorithm
-
-		for(int i = 1;i <= n;++i)
-			parent[i] = i;
-
-		sort(e,e + m);
-
-		int total = 0;
-
-		for(int i = 0;i < m;++i){
-			if(Find(e[i].u) != Find(e[i].v)){
-				Union(e[i].u,e[i].v);
-				total += e[i].w;
-				in_tree[i] = true;
-
-				L[ e[i].u ].push_back(e[i].v);
-				edge_id[ e[i].u ].push_back(i);
-
-				L[ e[i].v ].push_back(e[i].u);
-				edge_id[ e[i].v ].push_back(i);
-
-				//printf("%d - %d (%d)\n",e[i].u,e[i].v,e[i].w);
-			}else in_tree[i] = false;
-		}
-
-		//printf("Total weight = %d\n\n",total);
 	}
 
 	MPI_Bcast(&n,1,MPI_INT,0,MPI_COMM_WORLD);
 	MPI_Bcast(&m,1,MPI_INT,0,MPI_COMM_WORLD);
+
+	int blocklengths[] = {1,1,1,1};
+	MPI_Aint displacements[] = {offsetof(edge,u), offsetof(edge,v), offsetof(edge,w), offsetof(edge,id)};
+	MPI_Datatype types[] = {MPI_INT, MPI_INT, MPI_INT, MPI_INT};
+	MPI_Datatype MPI_EDGE;
+
+	MPI_Type_create_struct(4,blocklengths,displacements,types,&MPI_EDGE);
+	MPI_Type_commit(&MPI_EDGE);
+
+	MPI_Bcast(e,m,MPI_EDGE,0,MPI_COMM_WORLD);
+
+	// Find minimum spanning tree using Kruskal's algorithm
+
+	for(int i = 1;i <= n;++i){
+		parent[i] = i;
+		uf_rank[i] = 0;
+	}
+
+	int start = (m + p - 1) / p * rank,end = min(m,(m + p - 1) / p * (rank + 1));
+	int m_local = 0;
+
+	for(int i = start;i < end;++i)
+		e_local[i - start] = e[i];
+
+	sort(e_local,e_local + (end - start));
+
+	for(int i = 0;i < end - start;++i){
+		if(Find(e_local[i].u) != Find(e_local[i].v)){
+			Union(e_local[i].u,e_local[i].v);
+			e_local[m_local] = e_local[i];
+			m_local++;
+		}
+	}
+
+	int curP = p;
+
+	while(curP > 1){
+		if(rank < curP){
+			//printf("%d %d\n",rank,curP);
+			int m1 = 0,m2 = 0;
+			MPI_Status status;
+
+			//printf("%d %d send\n",rank,curP);
+			MPI_Send(&m_local,1,MPI_INT,rank / 2,0,MPI_COMM_WORLD);
+			//printf("%d %d send\n",rank,curP);
+			MPI_Send(e_local,m_local,MPI_EDGE,rank / 2,1,MPI_COMM_WORLD);
+			//printf("%d %d send\n",rank,curP);
+
+			if(2 * rank < curP){
+				//printf("%d %d receive\n",rank,curP);
+				MPI_Recv(&m1,1,MPI_INT,2 * rank,0,MPI_COMM_WORLD,&status);
+				//printf("%d %d receive\n",rank,curP);
+				MPI_Recv(e_local,m1,MPI_EDGE,2 * rank,1,MPI_COMM_WORLD,&status);
+				//printf("%d %d receive\n",rank,curP);
+
+
+				if(2 * rank + 1 < curP){
+					//printf("%d %d receive\n",rank,curP);
+					MPI_Recv(&m2,1,MPI_INT,2 * rank + 1,0,MPI_COMM_WORLD,&status);
+					//printf("%d %d receive\n",rank,curP);
+					MPI_Recv(e_local + m1,m2,MPI_EDGE,2 * rank + 1,1,MPI_COMM_WORLD,&status);
+					//printf("%d %d receive\n",rank,curP);
+				}
+
+				int m_aux = m1 + m2;
+				sort(e_local,e_local + m_aux);
+
+				for(int i = 1;i <= n;++i){
+					parent[i] = i;
+					uf_rank[i] = 0;
+				}
+
+				m_local = 0;
+
+				for(int i = 0;i < m_aux;++i){
+					if(Find(e_local[i].u) != Find(e_local[i].v)){
+						Union(e_local[i].u,e_local[i].v);
+						e_local[m_local] = e_local[i];
+						m_local++;
+					}
+				}
+			}
+		}
+
+		curP = (curP + 1) / 2;
+	}
+
+	if(rank == 0){
+		int total = 0;
+
+		for(int i = 0;i < m_local;++i){
+			L[ e_local[i].u ].push_back(e_local[i].v);
+			edge_id[ e_local[i].u ].push_back(e_local[i].id);
+
+			L[ e_local[i].v ].push_back(e_local[i].u);
+			edge_id[ e_local[i].v ].push_back(e_local[i].id);
+
+			in_tree[ e_local[i].id ] = true;
+
+			printf("%d - %d (%d)\n",e_local[i].u,e_local[i].v,e_local[i].w);
+			total += e_local[i].w;
+		}
+
+		printf("Total weight = %d\n\n",total);
+	}
 
 	for(int i = 1;i <= n;++i){
 		int list_size;
@@ -272,16 +239,6 @@ int main(int argc, char *argv[]){
 	}
 
 	MPI_Bcast(in_tree,m,MPI_C_BOOL,0,MPI_COMM_WORLD);
-
-	int blocklengths[] = {1,1,1};
-	MPI_Aint displacements[] = {offsetof(edge,u), offsetof(edge,v), offsetof(edge,w)};
-	MPI_Datatype types[] = {MPI_INT, MPI_INT, MPI_INT};
-	MPI_Datatype MPI_EDGE;
-
-	MPI_Type_create_struct(3,blocklengths,displacements,types,&MPI_EDGE);
-	MPI_Type_commit(&MPI_EDGE);
-
-	MPI_Bcast(e,m,MPI_EDGE,0,MPI_COMM_WORLD);
 
 	// Find the path int T that connect two endpoint of an edge
 
@@ -357,15 +314,15 @@ int main(int argc, char *argv[]){
 	}
 
 	if(rank != 0){
-		MPI_Send(&max_increase_local[rank],1,MPI_INT,0,0,MPI_COMM_WORLD);
-		MPI_Send(&most_vital_edge_local[rank],1,MPI_INT,0,1,MPI_COMM_WORLD);
+		MPI_Send(&max_increase_local[rank],1,MPI_INT,0,2,MPI_COMM_WORLD);
+		MPI_Send(&most_vital_edge_local[rank],1,MPI_INT,0,3,MPI_COMM_WORLD);
 	}else{
 		int most_vital_edge = most_vital_edge_local[0],max_increase = max_increase_local[0];
 		MPI_Status status;
 
 		for(int i = 1;i < p;++i){
-			MPI_Recv(&max_increase_local[i],1,MPI_INT,i,0,MPI_COMM_WORLD,&status);
-			MPI_Recv(&most_vital_edge_local[i],1,MPI_INT,i,1,MPI_COMM_WORLD,&status);
+			MPI_Recv(&max_increase_local[i],1,MPI_INT,i,2,MPI_COMM_WORLD,&status);
+			MPI_Recv(&most_vital_edge_local[i],1,MPI_INT,i,3,MPI_COMM_WORLD,&status);
 
 			if(max_increase_local[i] > max_increase){
 				max_increase = max_increase_local[i];
