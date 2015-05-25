@@ -155,30 +155,20 @@ int main(int argc, char *argv[]){
 
 	while(curP > 1){
 		if(rank < curP){
-			//printf("%d %d\n",rank,curP);
 			int m1 = 0,m2 = 0;
 			MPI_Status status;
 
-			//printf("%d %d send\n",rank,curP);
 			MPI_Send(&m_local,1,MPI_INT,rank / 2,0,MPI_COMM_WORLD);
-			//printf("%d %d send\n",rank,curP);
 			MPI_Send(e_local,m_local,MPI_EDGE,rank / 2,1,MPI_COMM_WORLD);
-			//printf("%d %d send\n",rank,curP);
 
 			if(2 * rank < curP){
-				//printf("%d %d receive\n",rank,curP);
 				MPI_Recv(&m1,1,MPI_INT,2 * rank,0,MPI_COMM_WORLD,&status);
-				//printf("%d %d receive\n",rank,curP);
 				MPI_Recv(e_local,m1,MPI_EDGE,2 * rank,1,MPI_COMM_WORLD,&status);
-				//printf("%d %d receive\n",rank,curP);
 
 
 				if(2 * rank + 1 < curP){
-					//printf("%d %d receive\n",rank,curP);
 					MPI_Recv(&m2,1,MPI_INT,2 * rank + 1,0,MPI_COMM_WORLD,&status);
-					//printf("%d %d receive\n",rank,curP);
 					MPI_Recv(e_local + m1,m2,MPI_EDGE,2 * rank + 1,1,MPI_COMM_WORLD,&status);
-					//printf("%d %d receive\n",rank,curP);
 				}
 
 				int m_aux = m1 + m2;
