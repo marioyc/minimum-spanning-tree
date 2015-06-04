@@ -135,7 +135,7 @@ int main(int argc, char *argv[]){
 		uf_rank[i] = 0;
 	}
 
-	int start = (m + p - 1) / p * rank,end = min(m,(m + p - 1) / p * (rank + 1));
+	int start = min(m,(m + p - 1) / p * rank),end = min(m,(m + p - 1) / p * (rank + 1));
 	int m_local = 0;
 
 	for(int i = start;i < end;++i)
@@ -258,13 +258,11 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	printf("\n");
-
 	bool verified_global;
 	MPI_Reduce(&verified_local,&verified_global,1,MPI_C_BOOL,MPI_LAND,0,MPI_COMM_WORLD);
 
 	if(rank == 0){
-		printf("Verification: ");
+		printf("\nVerification: ");
 		if(verified_global) printf("It is an MST\n\n");
 		else printf("It is not an MST\n\n");
 	}
@@ -294,11 +292,15 @@ int main(int argc, char *argv[]){
 						rep = j;
 				}
 
-			printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
+			if(rep != -1){
+				printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
 
-			if(e[rep].w - e[i].w > max_increase_local[rank]){
-				max_increase_local[rank] = e[rep].w - e[i].w;
-				most_vital_edge_local[rank] = i;
+				if(e[rep].w - e[i].w > max_increase_local[rank]){
+					max_increase_local[rank] = e[rep].w - e[i].w;
+					most_vital_edge_local[rank] = i;
+				}
+			}else{
+				printf(" no replacement\n");
 			}
 		}
 	}

@@ -309,11 +309,15 @@ int main(){
 						rep = j;
 				}
 
-			printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
+			if(rep != -1){
+				printf(", replacement : (%d, %d)\n",e[rep].u,e[rep].v);
 
-			if(most_vital_edge == -1 || e[rep].w - e[i].w > max_increase){
-				max_increase = e[rep].w - e[i].w;
-				most_vital_edge = i;
+				if(most_vital_edge == -1 || e[rep].w - e[i].w > max_increase){
+					max_increase = e[rep].w - e[i].w;
+					most_vital_edge = i;
+				}
+			}else{
+				printf(" no replacement\n");
 			}
 		}
 	}
